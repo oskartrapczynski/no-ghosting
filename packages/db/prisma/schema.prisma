@@ -1,0 +1,188 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Multi-tenant: each company is a tenant
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  domain    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users      User[]
+  pipelines  Pipeline[]
+  candidates Candidate[]
+  channels   ChannelConfig[]
+
+  @@map("tenants")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String
+  name      String
+  role      UserRole @default(RECRUITER)
+  tenantId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([email, tenantId])
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  RECRUITER
+  VIEWER
+}
+
+// Recruitment pipeline (e.g., "Software Engineer Hiring Q1 2026")
+model Pipeline {
+  id        String   @id @default(cuid())
+  name      String
+  atsSource String?  // which ATS adapter synced this
+  atsId     String?  // external ID in the ATS
+  active    Boolean  @default(true)
+  tenantId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stages     Stage[]
+  candidates CandidatePipeline[]
+
+  @@map("pipelines")
+}
+
+// Stage within a pipeline (e.g., "Applied", "Phone Screen", "Interview", "Offer")
+model Stage {
+  id         String   @id @default(cuid())
+  name       String
+  order      Int
+  pipelineId String
+  createdAt  DateTime @default(now())
+
+  pipeline    Pipeline       @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  followUpRules FollowUpRule[]
+  candidatePipelines CandidatePipeline[]
+
+  @@map("stages")
+}
+
+// Candidate
+model Candidate {
+  id        String   @id @default(cuid())
+  email     String
+  name      String
+  phone     String?
+  atsId     String?  // external ID in the ATS
+  tenantId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pipelines CandidatePipeline[]
+
+  @@unique([email, tenantId])
+  @@map("candidates")
+}
+
+// Junction: candidate's position in a pipeline
+model CandidatePipeline {
+  id            String    @id @default(cuid())
+  candidateId   String
+  pipelineId    String
+  currentStageId String
+  lastContactAt DateTime? // last time recruiter/system contacted candidate
+  nextFollowUpAt DateTime? // when the next follow-up is scheduled
+  status        CandidateStatus @default(ACTIVE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  pipeline  Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  stage     Stage     @relation(fields: [currentStageId], references: [id])
+  followUpLogs FollowUpLog[]
+
+  @@unique([candidateId, pipelineId])
+  @@index([nextFollowUpAt])
+  @@index([status])
+  @@map("candidate_pipelines")
+}
+
+enum CandidateStatus {
+  ACTIVE
+  HIRED
+  REJECTED
+  WITHDRAWN
+  GHOSTED // flagged as ghosted (no response sent within SLA)
+}
+
+// Follow-up rule per stage: "if no contact for X days, send message via channel Y"
+model FollowUpRule {
+  id             String   @id @default(cuid())
+  stageId        String
+  delayDays      Int      // days of silence before triggering
+  channelType    ChannelType
+  templateSubject String?
+  templateBody   String   // message template with {{variables}}
+  escalate       Boolean  @default(false) // notify manager if still no response
+  maxAttempts    Int      @default(3)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  stage Stage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  followUpLogs FollowUpLog[]
+
+  @@map("follow_up_rules")
+}
+
+enum ChannelType {
+  EMAIL
+  SMS
+  ATS_MESSAGE
+}
+
+// Log of every follow-up sent
+model FollowUpLog {
+  id                  String   @id @default(cuid())
+  candidatePipelineId String
+  ruleId              String
+  channelType         ChannelType
+  attemptNumber       Int
+  sentAt              DateTime @default(now())
+  deliveredAt         DateTime?
+  failedAt            DateTime?
+  failureReason       String?
+
+  candidatePipeline CandidatePipeline @relation(fields: [candidatePipelineId], references: [id], onDelete: Cascade)
+  rule              FollowUpRule      @relation(fields: [ruleId], references: [id])
+
+  @@map("follow_up_logs")
+}
+
+// Channel configuration per tenant (SMTP settings, SMS provider, etc.)
+model ChannelConfig {
+  id          String      @id @default(cuid())
+  tenantId    String
+  channelType ChannelType
+  config      Json        // encrypted config: SMTP host/port/user, Twilio SID, etc.
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, channelType])
+  @@map("channel_configs")
+}
