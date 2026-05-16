@@ -11,20 +11,20 @@
     "test": "jest"
   },
   "dependencies": {
-    "@nestjs/common": "^11.0.0",
-    "@nestjs/core": "^11.0.0",
-    "@nestjs/platform-express": "^11.0.0",
     "@nestjs/bullmq": "^11.0.0",
+    "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-fastify": "^11.1.21",
     "@nestjs/schedule": "^5.0.0",
+    "@no-ghosting/adapters": "*",
+    "@no-ghosting/channels": "*",
+    "@no-ghosting/db": "*",
+    "@no-ghosting/shared": "*",
     "bullmq": "^5.30.0",
     "ioredis": "^5.4.0",
     "reflect-metadata": "^0.2.0",
-    "rxjs": "^7.8.0",
-    "@no-ghosting/db": "*",
-    "@no-ghosting/adapters": "*",
-    "@no-ghosting/channels": "*",
-    "@no-ghosting/shared": "*"
+    "rxjs": "^7.8.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
