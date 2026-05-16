@@ -45,7 +45,7 @@ export function Candidates() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h2 style={{ fontSize: 24 }}>Candidates</h2>
         <div style={{ display: "flex", gap: 8 }}>
-          {["", "ACTIVE", "GHOSTED", "HIRED", "REJECTED"].map((s) => (
+          {["", "ACTIVE", "GHOSTED", "HIRED", "REJECTED", "WITHDRAWN"].map((s) => (
             <button
               key={s}
               onClick={() => setFilter(s)}
