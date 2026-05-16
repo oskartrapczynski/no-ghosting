@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body } from "@nestjs/common";
+import { Controller, Get, Post, Body, Logger, HttpException } from "@nestjs/common";
 import { AdaptersService } from "./adapters.service";
 
 @Controller("adapters")
@@ -18,7 +18,7 @@ export class AdaptersController {
   }
 
   @Post("sync")
-  sync(
+  async sync(
     @Body()
     body: {
       adapterId: string;
@@ -26,6 +26,11 @@ export class AdaptersController {
       config: Record<string, unknown>;
     },
   ) {
-    return this.adaptersService.sync(body.adapterId, body.tenantId, body.config);
+    try {
+      return await this.adaptersService.sync(body.adapterId, body.tenantId, body.config);
+    } catch (err: any) {
+      Logger.error(err);
+      throw new HttpException(err.message || "Sync failed", 500);
+    }
   }
 }

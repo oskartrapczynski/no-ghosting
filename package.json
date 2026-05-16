@@ -15,7 +15,9 @@
     "test": "turbo test",
     "db:generate": "turbo db:generate",
     "db:migrate": "turbo db:migrate",
-    "db:push": "turbo db:push"
+    "db:push": "turbo db:push",
+    "db:seed": "turbo db:seed",
+    "db:reset": "turbo db:reset"
   },
   "devDependencies": {
     "turbo": "^2.5.0",

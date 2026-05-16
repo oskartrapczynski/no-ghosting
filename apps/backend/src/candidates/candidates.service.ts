@@ -7,7 +7,12 @@ export class CandidatesService {
 
   async findAll(tenantId: string, status?: string) {
     return this.prisma.candidate.findMany({
-      where: { tenantId },
+      where: {
+        tenantId,
+        ...(status && {
+          pipelines: { some: { status: status as any } },
+        }),
+      },
       include: {
         pipelines: {
           where: status ? { status: status as any } : undefined,

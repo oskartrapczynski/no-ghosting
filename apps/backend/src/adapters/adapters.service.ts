@@ -39,36 +39,47 @@ export class AdaptersService {
     const pipelineMap = new Map<string, { id: string; stageMap: Map<string, string> }>();
 
     for (const pipeline of result.pipelines) {
-      const dbPipeline = await this.prisma.pipeline.upsert({
-        where: {
-          id: `${tenantId}_${pipeline.atsId}`,
-        },
-        create: {
-          id: `${tenantId}_${pipeline.atsId}`,
-          tenantId,
-          name: pipeline.name,
-          atsSource: adapterId,
-          atsId: pipeline.atsId,
-        },
-        update: {
-          name: pipeline.name,
-        },
+      let dbPipeline = await this.prisma.pipeline.findFirst({
+        where: { tenantId, atsId: pipeline.atsId },
       });
+
+      if (dbPipeline) {
+        dbPipeline = await this.prisma.pipeline.update({
+          where: { id: dbPipeline.id },
+          data: { name: pipeline.name },
+        });
+      } else {
+        dbPipeline = await this.prisma.pipeline.create({
+          data: {
+            tenantId,
+            name: pipeline.name,
+            atsSource: adapterId,
+            atsId: pipeline.atsId,
+          },
+        });
+      }
 
       const stageMap = new Map<string, string>();
       for (const stage of pipeline.stages) {
-        const stageId = `${dbPipeline.id}_${stage.atsId}`;
-        await this.prisma.stage.upsert({
-          where: { id: stageId },
-          create: {
-            id: stageId,
-            pipelineId: dbPipeline.id,
-            name: stage.name,
-            order: stage.order,
-          },
-          update: { name: stage.name, order: stage.order },
+        let dbStage = await this.prisma.stage.findFirst({
+          where: { pipelineId: dbPipeline.id, name: stage.name },
         });
-        stageMap.set(stage.atsId, stageId);
+
+        if (dbStage) {
+          dbStage = await this.prisma.stage.update({
+            where: { id: dbStage.id },
+            data: { name: stage.name, order: stage.order },
+          });
+        } else {
+          dbStage = await this.prisma.stage.create({
+            data: {
+              pipelineId: dbPipeline.id,
+              name: stage.name,
+              order: stage.order,
+            },
+          });
+        }
+        stageMap.set(stage.atsId, dbStage.id);
       }
 
       pipelineMap.set(pipeline.atsId, { id: dbPipeline.id, stageMap });

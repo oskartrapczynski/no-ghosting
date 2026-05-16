@@ -11,7 +11,7 @@ export function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
-    fetch("/api/pipelines/stats?tenantId=demo")
+    fetch("/api/pipelines/stats?tenantId=demo-tenant")
       .then((r) => r.json())
       .then(setStats)
       .catch(() => setStats({ total: 0, active: 0, ghosted: 0, responseRate: 100 }));
