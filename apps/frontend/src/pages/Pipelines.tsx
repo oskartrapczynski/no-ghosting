@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { api } from "../lib/api";
 
 interface Stage {
   id: string;
@@ -18,8 +19,7 @@ export function Pipelines() {
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
 
   useEffect(() => {
-    fetch("/api/pipelines?tenantId=demo-tenant")
-      .then((r) => r.json())
+    api<Pipeline[]>("/pipelines")
       .then(setPipelines)
       .catch(() => setPipelines([]));
   }, []);

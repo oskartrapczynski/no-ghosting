@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
@@ -12,9 +12,9 @@ export class PipelinesService {
     });
   }
 
-  async findOne(id: string) {
-    return this.prisma.pipeline.findUnique({
-      where: { id },
+  async findOne(tenantId: string, id: string) {
+    const pipeline = await this.prisma.pipeline.findFirst({
+      where: { id, tenantId },
       include: {
         stages: {
           orderBy: { order: "asc" },
@@ -22,6 +22,8 @@ export class PipelinesService {
         },
       },
     });
+    if (!pipeline) throw new NotFoundException("Pipeline not found");
+    return pipeline;
   }
 
   async getStats(tenantId: string) {
@@ -37,6 +39,11 @@ export class PipelinesService {
       }),
     ]);
 
-    return { total, active, ghosted, responseRate: total > 0 ? ((total - ghosted) / total) * 100 : 100 };
+    return {
+      total,
+      active,
+      ghosted,
+      responseRate: total > 0 ? ((total - ghosted) / total) * 100 : 100,
+    };
   }
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { api } from "../lib/api";
 
 interface Stats {
   total: number;
@@ -11,8 +12,7 @@ export function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
-    fetch("/api/pipelines/stats?tenantId=demo-tenant")
-      .then((r) => r.json())
+    api<Stats>("/pipelines/stats")
       .then(setStats)
       .catch(() => setStats({ total: 0, active: 0, ghosted: 0, responseRate: 100 }));
   }, []);

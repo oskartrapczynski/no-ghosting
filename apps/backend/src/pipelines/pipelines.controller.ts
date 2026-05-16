@@ -17,7 +17,7 @@ export class PipelinesController {
   }
 
   @Get(":id")
-  findOne(@Param("id") id: string) {
-    return this.pipelinesService.findOne(id);
+  findOne(@TenantId() tenantId: string, @Param("id") id: string) {
+    return this.pipelinesService.findOne(tenantId, id);
   }
 }

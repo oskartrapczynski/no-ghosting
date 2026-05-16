@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { api } from "../lib/api";
 
 interface FollowUpRule {
   id: string;
@@ -30,9 +31,8 @@ export function Rules() {
   const [detail, setDetail] = useState<Pipeline | null>(null);
 
   useEffect(() => {
-    fetch("/api/pipelines?tenantId=demo-tenant")
-      .then((r) => r.json())
-      .then((data: Pipeline[]) => {
+    api<Pipeline[]>("/pipelines")
+      .then((data) => {
         setPipelines(data);
         if (data.length > 0) setSelectedPipeline(data[0].id);
       })
@@ -41,8 +41,7 @@ export function Rules() {
 
   useEffect(() => {
     if (!selectedPipeline) return;
-    fetch(`/api/pipelines/${selectedPipeline}`)
-      .then((r) => r.json())
+    api<Pipeline>(`/pipelines/${selectedPipeline}`)
       .then(setDetail)
       .catch(() => setDetail(null));
   }, [selectedPipeline]);

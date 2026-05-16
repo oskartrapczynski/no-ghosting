@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { api } from "../lib/api";
 
 interface Adapter {
   id: string;
@@ -9,8 +10,7 @@ export function Settings() {
   const [adapters, setAdapters] = useState<Adapter[]>([]);
 
   useEffect(() => {
-    fetch("/api/adapters")
-      .then((r) => r.json())
+    api<Adapter[]>("/adapters")
       .then(setAdapters)
       .catch(() => setAdapters([]));
   }, []);

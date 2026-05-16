@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { api } from "../lib/api";
 
 interface FollowUpLog {
   id: string;
@@ -33,10 +34,8 @@ export function Candidates() {
   const [filter, setFilter] = useState<string>("");
 
   useEffect(() => {
-    const params = new URLSearchParams({ tenantId: "demo-tenant" });
-    if (filter) params.set("status", filter);
-    fetch(`/api/candidates?${params}`)
-      .then((r) => r.json())
+    const qs = filter ? `?status=${filter}` : "";
+    api<Candidate[]>(`/candidates${qs}`)
       .then(setCandidates)
       .catch(() => setCandidates([]));
   }, [filter]);
