@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { APP_GUARD } from "@nestjs/core";
 import { BullModule } from "@nestjs/bullmq";
 import { ScheduleModule } from "@nestjs/schedule";
 import { PrismaModule } from "./prisma/prisma.module";
@@ -8,6 +9,7 @@ import { CandidatesModule } from "./candidates/candidates.module";
 import { FollowUpsModule } from "./follow-ups/follow-ups.module";
 import { AdaptersModule } from "./adapters/adapters.module";
 import { HealthModule } from "./health/health.module";
+import { TenantGuard } from "./auth/tenant.guard";
 
 @Module({
   imports: [
@@ -26,5 +28,6 @@ import { HealthModule } from "./health/health.module";
     FollowUpsModule,
     AdaptersModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: TenantGuard }],
 })
 export class AppModule {}

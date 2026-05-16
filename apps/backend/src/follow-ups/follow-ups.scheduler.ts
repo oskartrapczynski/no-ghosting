@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { Cron, CronExpression } from "@nestjs/schedule";
+import { Cron } from "@nestjs/schedule";
 import { FollowUpsService } from "./follow-ups.service";
 
 @Injectable()
@@ -9,7 +9,7 @@ export class FollowUpsScheduler {
   constructor(private followUpsService: FollowUpsService) {}
 
   /** Run every 15 minutes: check for overdue follow-ups and enqueue them */
-  @Cron(CronExpression.EVERY_QUARTER)
+  @Cron("*/15 * * * *")
   async handleCron() {
     this.logger.log("Scanning for overdue follow-ups...");
     const result = await this.followUpsService.scheduleOverdueFollowUps();
