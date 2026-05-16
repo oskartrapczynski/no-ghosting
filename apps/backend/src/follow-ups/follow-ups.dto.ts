@@ -6,31 +6,65 @@ import {
   IsString,
   Max,
   Min,
-} from "class-validator";
+} from 'class-validator'
 
-export class CreateFollowUpRuleDto {
+export class UpdateFollowUpRuleDto {
+  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(365)
-  delayDays!: number;
+  delayDays?: number
 
-  @IsIn(["EMAIL", "SMS", "ATS_MESSAGE"])
-  channelType!: "EMAIL" | "SMS" | "ATS_MESSAGE";
+  @IsOptional()
+  @IsIn(['EMAIL', 'SMS', 'ATS_MESSAGE'])
+  channelType?: 'EMAIL' | 'SMS' | 'ATS_MESSAGE'
 
   @IsOptional()
   @IsString()
-  templateSubject?: string;
+  templateSubject?: string
 
+  @IsOptional()
   @IsString()
-  templateBody!: string;
+  templateBody?: string
 
   @IsOptional()
   @IsInt()
   @Min(1)
   @Max(20)
-  maxAttempts?: number;
+  maxAttempts?: number
 
   @IsOptional()
   @IsBoolean()
-  escalate?: boolean;
+  escalate?: boolean
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean
+}
+
+export class CreateFollowUpRuleDto {
+  @IsInt()
+  @Min(0)
+  @Max(365)
+  delayDays!: number
+
+  @IsIn(['EMAIL', 'SMS', 'ATS_MESSAGE'])
+  channelType!: 'EMAIL' | 'SMS' | 'ATS_MESSAGE'
+
+  @IsOptional()
+  @IsString()
+  templateSubject?: string
+
+  @IsString()
+  templateBody!: string
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  maxAttempts?: number
+
+  @IsOptional()
+  @IsBoolean()
+  escalate?: boolean
 }
