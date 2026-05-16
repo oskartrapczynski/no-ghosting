@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
@@ -26,9 +26,9 @@ export class CandidatesService {
     });
   }
 
-  async findOne(id: string) {
-    return this.prisma.candidate.findUnique({
-      where: { id },
+  async findOne(tenantId: string, id: string) {
+    const candidate = await this.prisma.candidate.findFirst({
+      where: { id, tenantId },
       include: {
         pipelines: {
           include: {
@@ -39,10 +39,21 @@ export class CandidatesService {
         },
       },
     });
+    if (!candidate) throw new NotFoundException("Candidate not found");
+    return candidate;
   }
 
   /** Mark that recruiter contacted the candidate (resets follow-up timer) */
-  async markContacted(candidatePipelineId: string, delayDays: number) {
+  async markContacted(
+    tenantId: string,
+    candidatePipelineId: string,
+    delayDays: number,
+  ) {
+    const cp = await this.prisma.candidatePipeline.findFirst({
+      where: { id: candidatePipelineId, candidate: { tenantId } },
+    });
+    if (!cp) throw new NotFoundException("Candidate pipeline not found");
+
     const nextFollowUp = new Date();
     nextFollowUp.setDate(nextFollowUp.getDate() + delayDays);
 

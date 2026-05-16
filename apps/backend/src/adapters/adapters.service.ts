@@ -117,8 +117,11 @@ export class AdaptersService {
               orderBy: { delayDays: "asc" },
             });
 
-            const nextFollowUpAt = new Date();
-            nextFollowUpAt.setDate(nextFollowUpAt.getDate() + (rule?.delayDays ?? 3));
+            const lastContactAt = candidate.appliedAt ?? new Date();
+            const nextFollowUpAt = new Date(lastContactAt);
+            nextFollowUpAt.setDate(
+              nextFollowUpAt.getDate() + (rule?.delayDays ?? 3),
+            );
 
             await this.prisma.candidatePipeline.upsert({
               where: {
@@ -131,7 +134,7 @@ export class AdaptersService {
                 candidateId: dbCandidate.id,
                 pipelineId: pipelineInfo.id,
                 currentStageId: stageId,
-                lastContactAt: new Date(),
+                lastContactAt,
                 nextFollowUpAt,
                 status: "ACTIVE",
               },

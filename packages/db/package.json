@@ -11,7 +11,7 @@
     "db:studio": "dotenv -e ../../.env -- prisma studio",
     "db:seed": "dotenv -e ../../.env -- prisma db seed",
     "db:reset": "dotenv -e ../../.env -- prisma db push --force-reset --skip-generate && npm run db:seed",
-    "build": "tsc"
+    "build": "prisma generate && tsc"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

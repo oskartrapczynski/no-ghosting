@@ -1,17 +1,18 @@
-import { Controller, Get, Param, Query } from "@nestjs/common";
+import { Controller, Get, Param } from "@nestjs/common";
 import { PipelinesService } from "./pipelines.service";
+import { TenantId } from "../auth/tenant.decorator";
 
 @Controller("pipelines")
 export class PipelinesController {
   constructor(private pipelinesService: PipelinesService) {}
 
   @Get()
-  findAll(@Query("tenantId") tenantId: string) {
+  findAll(@TenantId() tenantId: string) {
     return this.pipelinesService.findAll(tenantId);
   }
 
   @Get("stats")
-  getStats(@Query("tenantId") tenantId: string) {
+  getStats(@TenantId() tenantId: string) {
     return this.pipelinesService.getStats(tenantId);
   }
 

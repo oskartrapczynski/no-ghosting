@@ -1,7 +1,14 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { PrismaService } from "../prisma/prisma.service";
+import { CreateFollowUpRuleDto } from "./follow-ups.dto";
+
+/** Sentinel pushed onto nextFollowUpAt when a job is enqueued, so the same
+ *  candidate isn't re-enqueued on the next cron tick before the worker runs.
+ *  The worker overwrites it with the real next-attempt time (or null) on
+ *  completion / failure. */
+const REENQUEUE_LOCK_MINUTES = 60;
 
 @Injectable()
 export class FollowUpsService {
@@ -13,8 +20,9 @@ export class FollowUpsService {
   ) {}
 
   /**
-   * Scan for candidates who are overdue for a follow-up
-   * and enqueue jobs for them.
+   * Scan for candidates who are overdue for a follow-up and enqueue jobs.
+   * Each candidate has its `nextFollowUpAt` pushed forward atomically before
+   * enqueue to prevent double-scheduling if cron fires again.
    */
   async scheduleOverdueFollowUps(tenantId?: string) {
     const now = new Date();
@@ -23,32 +31,38 @@ export class FollowUpsService {
       where: {
         status: "ACTIVE",
         nextFollowUpAt: { lte: now },
-        ...(tenantId && {
-          pipeline: { tenantId },
-        }),
+        ...(tenantId && { pipeline: { tenantId } }),
       },
       include: {
         candidate: true,
-        pipeline: true,
         stage: {
-          include: { followUpRules: { where: { active: true } } },
+          include: {
+            followUpRules: {
+              where: { active: true },
+              orderBy: { delayDays: "asc" },
+            },
+          },
         },
       },
     });
 
     this.logger.log(`Found ${overdue.length} overdue follow-ups`);
 
+    let scheduled = 0;
     for (const cp of overdue) {
-      const rule = cp.stage.followUpRules[0]; // pick first active rule
-      if (!rule) continue;
+      const rules = cp.stage.followUpRules;
+      if (rules.length === 0) continue;
 
-      // Count previous attempts
-      const attempts = await this.prisma.followUpLog.count({
-        where: { candidatePipelineId: cp.id, ruleId: rule.id },
+      // Count previous *failed* attempts on this CP — successes shouldn't
+      // burn through the attempt budget.
+      const previousAttempts = await this.prisma.followUpLog.count({
+        where: { candidatePipelineId: cp.id, failedAt: { not: null } },
       });
 
-      if (attempts >= rule.maxAttempts) {
-        // Mark as ghosted — max attempts reached
+      // Pick the rule for this attempt index (escalating). Cap at last rule.
+      const rule = rules[Math.min(previousAttempts, rules.length - 1)];
+
+      if (previousAttempts >= rule.maxAttempts) {
         await this.prisma.candidatePipeline.update({
           where: { id: cp.id },
           data: { status: "GHOSTED" },
@@ -59,41 +73,55 @@ export class FollowUpsService {
         continue;
       }
 
+      // Push nextFollowUpAt forward BEFORE enqueue. Use updateMany with a
+      // version check on the old value so a concurrent cron tick can't grab
+      // the same row.
+      const lockUntil = new Date(
+        now.getTime() + REENQUEUE_LOCK_MINUTES * 60_000,
+      );
+      const claim = await this.prisma.candidatePipeline.updateMany({
+        where: { id: cp.id, nextFollowUpAt: cp.nextFollowUpAt },
+        data: { nextFollowUpAt: lockUntil },
+      });
+      if (claim.count === 0) continue;
+
       await this.followUpQueue.add("send-follow-up", {
         candidatePipelineId: cp.id,
         ruleId: rule.id,
-        attemptNumber: attempts + 1,
+        attemptNumber: previousAttempts + 1,
       });
+      scheduled++;
     }
 
-    return { scheduled: overdue.length };
+    return { scheduled };
   }
 
-  /** Get follow-up rules for a stage */
-  async getRulesForStage(stageId: string) {
+  /** Get follow-up rules for a stage (scoped to tenant). */
+  async getRulesForStage(tenantId: string, stageId: string) {
+    await this.assertStageBelongsToTenant(tenantId, stageId);
     return this.prisma.followUpRule.findMany({
       where: { stageId },
       orderBy: { delayDays: "asc" },
     });
   }
 
-  /** Create or update a follow-up rule */
+  /** Create a follow-up rule (scoped to tenant). */
   async upsertRule(
+    tenantId: string,
     stageId: string,
-    data: {
-      delayDays: number;
-      channelType: "EMAIL" | "SMS" | "ATS_MESSAGE";
-      templateSubject?: string;
-      templateBody: string;
-      maxAttempts?: number;
-      escalate?: boolean;
-    },
+    data: CreateFollowUpRuleDto,
   ) {
+    await this.assertStageBelongsToTenant(tenantId, stageId);
     return this.prisma.followUpRule.create({
-      data: {
-        stageId,
-        ...data,
-      },
+      data: { stageId, ...data },
     });
+  }
+
+  private async assertStageBelongsToTenant(tenantId: string, stageId: string) {
+    const stage = await this.prisma.stage.findFirst({
+      where: { id: stageId, pipeline: { tenantId } },
+      select: { id: true },
+    });
+    if (!stage) throw new NotFoundException("Stage not found");
   }
 }
