@@ -4,6 +4,7 @@ export interface AtsCandidate {
   email: string;
   name: string;
   phone?: string;
+  pipelineAtsId?: string;
   currentStage?: string;
   appliedAt?: Date;
   metadata?: Record<string, unknown>;
