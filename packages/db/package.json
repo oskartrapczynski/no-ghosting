@@ -11,17 +11,17 @@
     "db:studio": "dotenv -e ../../.env -- prisma studio",
     "db:seed": "dotenv -e ../../.env -- prisma db seed",
     "db:reset": "dotenv -e ../../.env -- prisma db push --force-reset --skip-generate && npm run db:seed",
-    "build": "prisma generate && tsc"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "build": "dotenv -e ../../.env -- prisma generate && tsc"
   },
   "dependencies": {
-    "@prisma/client": "^6.6.0"
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "pg": "^8.13.0"
   },
   "devDependencies": {
+    "@types/pg": "^8.11.0",
     "dotenv-cli": "^8.0.0",
-    "prisma": "^6.6.0",
+    "prisma": "^7.8.0",
     "tsx": "^4.19.0",
     "typescript": "^5.8.0"
   }
