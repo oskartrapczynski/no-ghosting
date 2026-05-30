@@ -9,6 +9,7 @@ import { CandidatesModule } from "./candidates/candidates.module";
 import { FollowUpsModule } from "./follow-ups/follow-ups.module";
 import { AdaptersModule } from "./adapters/adapters.module";
 import { HealthModule } from "./health/health.module";
+import { WebhooksModule } from "./webhooks/webhooks.module";
 import { TenantGuard } from "./auth/tenant.guard";
 
 @Module({
@@ -27,6 +28,7 @@ import { TenantGuard } from "./auth/tenant.guard";
     CandidatesModule,
     FollowUpsModule,
     AdaptersModule,
+    WebhooksModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: TenantGuard }],
 })

@@ -19,6 +19,7 @@ export class CandidatesService {
           include: {
             pipeline: true,
             stage: true,
+            assignedRecruiter: true,
             followUpLogs: { orderBy: { sentAt: "desc" }, take: 5 },
           },
         },
@@ -34,6 +35,7 @@ export class CandidatesService {
           include: {
             pipeline: true,
             stage: true,
+            assignedRecruiter: true,
             followUpLogs: { orderBy: { sentAt: "desc" } },
           },
         },

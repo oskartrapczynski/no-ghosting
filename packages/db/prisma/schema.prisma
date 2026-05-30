@@ -16,10 +16,11 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users      User[]
-  pipelines  Pipeline[]
-  candidates Candidate[]
-  channels   ChannelConfig[]
+  users       User[]
+  recruiters  Recruiter[]
+  pipelines   Pipeline[]
+  candidates  Candidate[]
+  channels    ChannelConfig[]
 
   @@map("tenants")
 }
@@ -43,6 +44,27 @@ enum UserRole {
   ADMIN
   RECRUITER
   VIEWER
+}
+
+// Recruiter assigned to candidates. May or may not be a platform user (synced from ATS).
+// Anti-ghosting nudges are sent to this person, not the candidate.
+model Recruiter {
+  id        String   @id @default(cuid())
+  tenantId  String
+  email     String
+  name      String?
+  atsId     String?  // external ID in the ATS for sync mapping
+  slackId   String?  // future: Slack user ID for DM nudges
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  candidatePipelines CandidatePipeline[]
+
+  @@unique([email, tenantId])
+  @@index([atsId, tenantId])
+  @@map("recruiters")
 }
 
 // Recruitment pipeline (e.g., "Software Engineer Hiring Q1 2026")
@@ -98,19 +120,21 @@ model Candidate {
 
 // Junction: candidate's position in a pipeline
 model CandidatePipeline {
-  id            String    @id @default(cuid())
-  candidateId   String
-  pipelineId    String
-  currentStageId String
-  lastContactAt DateTime? // last time recruiter/system contacted candidate
-  nextFollowUpAt DateTime? // when the next follow-up is scheduled
-  status        CandidateStatus @default(ACTIVE)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                  String    @id @default(cuid())
+  candidateId         String
+  pipelineId          String
+  currentStageId      String
+  assignedRecruiterId String?   // recruiter responsible — nudges go to them
+  lastContactAt       DateTime? // last time recruiter contacted candidate (resets nudge timer)
+  nextFollowUpAt      DateTime? // when the next nudge to recruiter is scheduled
+  status              CandidateStatus @default(ACTIVE)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   pipeline  Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
   stage     Stage     @relation(fields: [currentStageId], references: [id])
+  assignedRecruiter Recruiter? @relation(fields: [assignedRecruiterId], references: [id], onDelete: SetNull)
   followUpLogs FollowUpLog[]
 
   @@unique([candidateId, pipelineId])

@@ -28,6 +28,13 @@ export const demoAdapter: AtsAdapter = {
           ],
         },
       ],
+      recruiters: [
+        {
+          atsId: "r1",
+          email: "recruiter@example.com",
+          name: "Maria Recruiter",
+        },
+      ],
       candidates: [
         {
           atsId: "c1",
@@ -36,6 +43,7 @@ export const demoAdapter: AtsAdapter = {
           pipelineAtsId: "demo-pipeline-1",
           currentStage: "s2",
           appliedAt: new Date("2026-01-15"),
+          assignedRecruiterAtsId: "r1",
         },
         {
           atsId: "c2",
@@ -45,6 +53,7 @@ export const demoAdapter: AtsAdapter = {
           pipelineAtsId: "demo-pipeline-1",
           currentStage: "s3",
           appliedAt: new Date("2026-01-10"),
+          assignedRecruiterAtsId: "r1",
         },
       ],
       errors: [],

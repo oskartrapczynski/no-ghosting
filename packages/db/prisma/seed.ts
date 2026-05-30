@@ -48,6 +48,38 @@ async function main() {
   }
   console.log(`  Users: ${usersData.length} upserted`);
 
+  // Recruiters — anti-ghosting nudges target these people
+  const recruitersData = [
+    {
+      id: "demo-recruiter-1",
+      email: "maria.recruiter@demo.example.com",
+      name: "Maria Recruiter",
+      atsId: "r1",
+    },
+    {
+      id: "demo-recruiter-2",
+      email: "john.recruiter@demo.example.com",
+      name: "John Recruiter",
+      atsId: "r2",
+    },
+  ];
+  const recruiterIdByAtsId: Record<string, string> = {};
+  for (const r of recruitersData) {
+    const rec = await prisma.recruiter.upsert({
+      where: { email_tenantId: { email: r.email, tenantId: tenant.id } },
+      update: { name: r.name, atsId: r.atsId },
+      create: {
+        id: r.id,
+        tenantId: tenant.id,
+        email: r.email,
+        name: r.name,
+        atsId: r.atsId,
+      },
+    });
+    recruiterIdByAtsId[r.atsId] = rec.id;
+  }
+  console.log(`  Recruiters: ${recruitersData.length} upserted`);
+
   // Pipeline
   const pipelineId = "demo-pipeline-1";
   const pipeline = await prisma.pipeline.upsert({
@@ -88,16 +120,17 @@ async function main() {
   }
   console.log(`  Pipeline: ${pipeline.name} (${stagesData.length} stages)`);
 
-  // Follow-up rules — Offer stage intentionally omitted (no auto follow-up after offer)
+  // Follow-up rules — these nudge the RECRUITER, not the candidate.
+  // Trigger: recruiter has gone silent on a candidate for `delayDays`.
   const rulesData = [
     {
       id: "demo-rule-applied",
       stage: "Applied",
       delayDays: 3,
       channelType: "EMAIL" as const,
-      templateSubject: "Update on your application at {{pipelineName}}",
+      templateSubject: "{{candidateName}} is waiting on you ({{daysSilent}}d)",
       templateBody:
-        "Hi {{candidateName}},\n\nThank you for applying to {{pipelineName}}. We wanted to let you know that our team is reviewing your application and we'll be in touch soon.\n\nBest regards,\nRecruiting Team",
+        "Hi {{recruiterName}},\n\n{{candidateName}} applied to {{pipelineName}} and has been at the {{stageName}} stage for {{daysSilent}} days without a reply from you.\n\nCandidate email: {{candidateEmail}}\n\nKeep them engaged — even a quick acknowledgement prevents ghosting.\n\n— No Ghosting",
       maxAttempts: 2,
       escalate: false,
     },
@@ -106,9 +139,9 @@ async function main() {
       stage: "Phone Screen",
       delayDays: 5,
       channelType: "EMAIL" as const,
-      templateSubject: "Following up — {{pipelineName}}",
+      templateSubject: "{{candidateName}} hasn't heard back ({{daysSilent}}d)",
       templateBody:
-        "Hi {{candidateName}},\n\nWe hope you're doing well. We wanted to follow up regarding your phone screen for {{pipelineName}}. Our team is still evaluating and we'll have an update for you shortly.\n\nBest regards,\nRecruiting Team",
+        "Hi {{recruiterName}},\n\n{{candidateName}} is at the {{stageName}} stage for {{pipelineName}} and has been waiting {{daysSilent}} days for your follow-up.\n\nReach out to keep the process moving.\n\n— No Ghosting",
       maxAttempts: 3,
       escalate: false,
     },
@@ -117,9 +150,9 @@ async function main() {
       stage: "Technical Interview",
       delayDays: 5,
       channelType: "EMAIL" as const,
-      templateSubject: "Update after your interview — {{pipelineName}}",
+      templateSubject: "Reminder: {{candidateName}} post-interview ({{daysSilent}}d silent)",
       templateBody:
-        "Hi {{candidateName}},\n\nThank you for taking the time to interview with us for {{pipelineName}}. We're currently in the process of reviewing all candidates and will get back to you with next steps.\n\nBest regards,\nRecruiting Team",
+        "Hi {{recruiterName}},\n\n{{candidateName}} completed their technical interview {{daysSilent}} days ago for {{pipelineName}} and is still waiting for next steps.\n\nThis is attempt {{attemptNumber}} — please get back to them today.\n\n— No Ghosting",
       maxAttempts: 3,
       escalate: true,
     },
@@ -128,9 +161,9 @@ async function main() {
       stage: "Final Round",
       delayDays: 3,
       channelType: "EMAIL" as const,
-      templateSubject: "Final round update — {{pipelineName}}",
+      templateSubject: "URGENT: {{candidateName}} post final round ({{daysSilent}}d)",
       templateBody:
-        "Hi {{candidateName}},\n\nThank you for completing the final round for {{pipelineName}}. We understand the wait can be stressful — our team is making a decision and we'll reach out very soon.\n\nBest regards,\nRecruiting Team",
+        "Hi {{recruiterName}},\n\n{{candidateName}} has been waiting {{daysSilent}} days after the final round for {{pipelineName}}. This is the critical decision window — close them or release them.\n\n— No Ghosting",
       maxAttempts: 2,
       escalate: true,
     },
@@ -174,6 +207,7 @@ async function main() {
     status: "ACTIVE" | "HIRED" | "REJECTED" | "WITHDRAWN" | "GHOSTED";
     lastContactDaysAgo: number;
     nextFollowUpDays: number | null;
+    recruiterAtsId: string;
   }> = [
     {
       email: "jan.kowalski@example.com",
@@ -184,6 +218,7 @@ async function main() {
       status: "ACTIVE",
       lastContactDaysAgo: 0,
       nextFollowUpDays: 3,
+      recruiterAtsId: "r1",
     },
     {
       email: "anna.nowak@example.com",
@@ -194,6 +229,7 @@ async function main() {
       status: "ACTIVE",
       lastContactDaysAgo: 0,
       nextFollowUpDays: 3,
+      recruiterAtsId: "r1",
     },
     {
       email: "tomasz.wisniewski@example.com",
@@ -204,6 +240,7 @@ async function main() {
       status: "GHOSTED",
       lastContactDaysAgo: 14,
       nextFollowUpDays: null,
+      recruiterAtsId: "r1",
     },
     {
       email: "katarzyna.zielinska@example.com",
@@ -214,6 +251,7 @@ async function main() {
       status: "GHOSTED",
       lastContactDaysAgo: 21,
       nextFollowUpDays: null,
+      recruiterAtsId: "r2",
     },
     {
       email: "michal.kowalczyk@example.com",
@@ -224,6 +262,7 @@ async function main() {
       status: "HIRED",
       lastContactDaysAgo: 2,
       nextFollowUpDays: null,
+      recruiterAtsId: "r1",
     },
     {
       email: "agnieszka.lewandowska@example.com",
@@ -234,6 +273,7 @@ async function main() {
       status: "REJECTED",
       lastContactDaysAgo: 5,
       nextFollowUpDays: null,
+      recruiterAtsId: "r2",
     },
     {
       email: "piotr.mazur@example.com",
@@ -244,6 +284,7 @@ async function main() {
       status: "ACTIVE",
       lastContactDaysAgo: 4,
       nextFollowUpDays: 1,
+      recruiterAtsId: "r1",
     },
     {
       email: "ewa.kaminska@example.com",
@@ -254,6 +295,7 @@ async function main() {
       status: "ACTIVE",
       lastContactDaysAgo: 10,
       nextFollowUpDays: -3,
+      recruiterAtsId: "r2",
     },
     {
       email: "marek.wojcik@example.com",
@@ -264,6 +306,7 @@ async function main() {
       status: "WITHDRAWN",
       lastContactDaysAgo: 3,
       nextFollowUpDays: null,
+      recruiterAtsId: "r1",
     },
     {
       email: "julia.dabrowska@example.com",
@@ -274,6 +317,7 @@ async function main() {
       status: "ACTIVE",
       lastContactDaysAgo: 0,
       nextFollowUpDays: 3,
+      recruiterAtsId: "r1",
     },
   ];
 
@@ -310,6 +354,7 @@ async function main() {
       },
       update: {
         currentStageId: stages[c.stage],
+        assignedRecruiterId: recruiterIdByAtsId[c.recruiterAtsId],
         lastContactAt: lastContact,
         nextFollowUpAt: nextFollowUp,
         status: c.status,
@@ -318,6 +363,7 @@ async function main() {
         candidateId: candidate.id,
         pipelineId: pipeline.id,
         currentStageId: stages[c.stage],
+        assignedRecruiterId: recruiterIdByAtsId[c.recruiterAtsId],
         lastContactAt: lastContact,
         nextFollowUpAt: nextFollowUp,
         status: c.status,

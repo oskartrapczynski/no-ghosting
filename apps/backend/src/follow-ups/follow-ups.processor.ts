@@ -28,6 +28,7 @@ export class FollowUpsProcessor extends WorkerHost {
         candidate: true,
         pipeline: { include: { tenant: true } },
         stage: true,
+        assignedRecruiter: true,
       },
     });
 
@@ -36,10 +37,25 @@ export class FollowUpsProcessor extends WorkerHost {
     const rule = await this.prisma.followUpRule.findUnique({
       where: { id: ruleId },
     });
-
     if (!rule || !rule.active) return;
 
-    // Get channel config for this tenant
+    if (!cp.assignedRecruiter) {
+      this.logger.warn(
+        `Candidate ${cp.candidate.name} has no assigned recruiter — skipping nudge`,
+      );
+      await this.prisma.followUpLog.create({
+        data: {
+          candidatePipelineId,
+          ruleId,
+          channelType: rule.channelType,
+          attemptNumber,
+          failedAt: new Date(),
+          failureReason: "No assigned recruiter",
+        },
+      });
+      return;
+    }
+
     const channelConfig = await this.prisma.channelConfig.findUnique({
       where: {
         tenantId_channelType: {
@@ -48,7 +64,6 @@ export class FollowUpsProcessor extends WorkerHost {
         },
       },
     });
-
     if (!channelConfig) {
       this.logger.error(
         `No ${rule.channelType} channel configured for tenant ${cp.pipeline.tenant.name}`,
@@ -56,39 +71,55 @@ export class FollowUpsProcessor extends WorkerHost {
       return;
     }
 
-    // Build message from template
-    const body = rule.templateBody
-      .replace(/\{\{candidateName\}\}/g, cp.candidate.name)
-      .replace(/\{\{pipelineName\}\}/g, cp.pipeline.name)
-      .replace(/\{\{stageName\}\}/g, cp.stage.name)
-      .replace(/\{\{attemptNumber\}\}/g, String(attemptNumber));
+    const daysSilent = cp.lastContactAt
+      ? Math.max(
+          0,
+          Math.floor(
+            (Date.now() - cp.lastContactAt.getTime()) / (1000 * 60 * 60 * 24),
+          ),
+        )
+      : 0;
 
-    const subject = rule.templateSubject
-      ?.replace(/\{\{candidateName\}\}/g, cp.candidate.name)
-      ?.replace(/\{\{pipelineName\}\}/g, cp.pipeline.name);
+    const renderVars = {
+      recruiterName: cp.assignedRecruiter.name ?? cp.assignedRecruiter.email,
+      candidateName: cp.candidate.name,
+      candidateEmail: cp.candidate.email,
+      pipelineName: cp.pipeline.name,
+      stageName: cp.stage.name,
+      daysSilent: String(daysSilent),
+      attemptNumber: String(attemptNumber),
+    };
+
+    const render = (tpl: string) =>
+      tpl.replace(/\{\{(\w+)\}\}/g, (_, key: string) =>
+        key in renderVars ? renderVars[key as keyof typeof renderVars] : "",
+      );
+
+    const body = render(rule.templateBody);
+    const subject = rule.templateSubject ? render(rule.templateSubject) : undefined;
 
     const message: FollowUpMessage = {
       to: {
-        email: cp.candidate.email,
-        phone: cp.candidate.phone ?? undefined,
-        atsId: cp.candidate.atsId ?? undefined,
+        email: cp.assignedRecruiter.email,
+        slackId: cp.assignedRecruiter.slackId ?? undefined,
       },
-      subject: subject ?? undefined,
+      subject,
       body,
+      recruiterName: cp.assignedRecruiter.name ?? undefined,
       candidateName: cp.candidate.name,
+      candidateEmail: cp.candidate.email,
       pipelineName: cp.pipeline.name,
       stageName: cp.stage.name,
+      daysSilent,
       attemptNumber,
     };
 
-    // Send via appropriate channel
     const channel = rule.channelType === "EMAIL" ? emailChannel : smsChannel;
     const result = await channel.send(
       message,
       channelConfig.config as Record<string, unknown>,
     );
 
-    // Log the attempt
     await this.prisma.followUpLog.create({
       data: {
         candidatePipelineId,
@@ -101,21 +132,19 @@ export class FollowUpsProcessor extends WorkerHost {
       },
     });
 
-    // Schedule next follow-up
+    // On success: schedule next nudge (in case recruiter still doesn't act).
+    // The webhook from ATS (recruiter replies to candidate) will reset this.
     if (result.success) {
       const nextFollowUp = new Date();
       nextFollowUp.setDate(nextFollowUp.getDate() + rule.delayDays);
       await this.prisma.candidatePipeline.update({
         where: { id: candidatePipelineId },
-        data: {
-          lastContactAt: new Date(),
-          nextFollowUpAt: nextFollowUp,
-        },
+        data: { nextFollowUpAt: nextFollowUp },
       });
     }
 
     this.logger.log(
-      `Follow-up ${result.success ? "sent" : "failed"} for ${cp.candidate.name} (attempt ${attemptNumber})`,
+      `Nudge ${result.success ? "sent" : "failed"} to ${cp.assignedRecruiter.email} re ${cp.candidate.name} (attempt ${attemptNumber})`,
     );
   }
 }

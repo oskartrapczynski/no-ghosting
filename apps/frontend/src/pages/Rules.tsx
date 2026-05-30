@@ -192,11 +192,12 @@ function RuleForm({
     rule?.channelType ?? "EMAIL",
   );
   const [templateSubject, setTemplateSubject] = useState(
-    rule?.templateSubject ?? "Following up on your application",
+    rule?.templateSubject ??
+      "{{candidateName}} is waiting on you ({{daysSilent}}d)",
   );
   const [templateBody, setTemplateBody] = useState(
     rule?.templateBody ??
-      "Hi {{candidateName}},\n\nJust checking in about your application for {{pipelineName}}. We'll be in touch soon.\n\nThanks!",
+      "Hi {{recruiterName}},\n\n{{candidateName}} is at the {{stageName}} stage for {{pipelineName}} and has been waiting {{daysSilent}} days for your reply.\n\nCandidate: {{candidateEmail}}\n\nReach out today to prevent ghosting.\n\n— No Ghosting",
   );
   const [maxAttempts, setMaxAttempts] = useState(rule?.maxAttempts ?? 3);
   const [escalate, setEscalate] = useState(rule?.escalate ?? false);
@@ -332,7 +333,7 @@ function RuleForm({
       )}
 
       <label style={{ fontSize: 12, color: "var(--color-text-muted)", display: "flex", flexDirection: "column", gap: 4 }}>
-        Body — supports {"{{candidateName}}, {{pipelineName}}, {{stageName}}, {{attemptNumber}}"}
+        Body — supports {"{{recruiterName}}, {{candidateName}}, {{candidateEmail}}, {{pipelineName}}, {{stageName}}, {{daysSilent}}, {{attemptNumber}}"}
         <textarea
           value={templateBody}
           onChange={(e) => setTemplateBody(e.target.value)}

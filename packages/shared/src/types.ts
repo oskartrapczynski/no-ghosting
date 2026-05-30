@@ -7,6 +7,17 @@ export interface AtsCandidate {
   pipelineAtsId?: string;
   currentStage?: string;
   appliedAt?: Date;
+  /** ATS id of the recruiter responsible for this candidate. Anti-ghosting
+   *  nudges are sent to this recruiter, not to the candidate. */
+  assignedRecruiterAtsId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+/** Recruiter synced from an ATS — the person we nudge to keep candidates engaged */
+export interface AtsRecruiter {
+  atsId: string;
+  email: string;
+  name?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -27,6 +38,7 @@ export interface AtsStage {
 /** Result of syncing data from an ATS */
 export interface AtsSyncResult {
   pipelines: AtsPipeline[];
+  recruiters: AtsRecruiter[];
   candidates: AtsCandidate[];
   errors: AtsSyncError[];
 }
@@ -37,18 +49,20 @@ export interface AtsSyncError {
   message: string;
 }
 
-/** Message to be sent through a channel */
+/** Recruiter-facing nudge dispatched by a channel. */
 export interface FollowUpMessage {
   to: {
     email?: string;
-    phone?: string;
-    atsId?: string;
+    slackId?: string;
   };
   subject?: string;
   body: string;
+  recruiterName?: string;
   candidateName: string;
+  candidateEmail: string;
   pipelineName: string;
   stageName: string;
+  daysSilent: number;
   attemptNumber: number;
 }
 

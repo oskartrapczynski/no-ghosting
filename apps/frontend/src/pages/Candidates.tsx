@@ -18,6 +18,7 @@ interface CandidatePipeline {
   nextFollowUpAt: string | null;
   pipeline: { name: string };
   stage: { name: string };
+  assignedRecruiter: { id: string; name: string | null; email: string } | null;
   followUpLogs: FollowUpLog[];
 }
 
@@ -73,6 +74,7 @@ export function Candidates() {
               <th style={{ padding: "8px 12px", fontSize: 12, color: "var(--color-text-muted)" }}>Name</th>
               <th style={{ padding: "8px 12px", fontSize: 12, color: "var(--color-text-muted)" }}>Email</th>
               <th style={{ padding: "8px 12px", fontSize: 12, color: "var(--color-text-muted)" }}>Stage</th>
+              <th style={{ padding: "8px 12px", fontSize: 12, color: "var(--color-text-muted)" }}>Recruiter</th>
               <th style={{ padding: "8px 12px", fontSize: 12, color: "var(--color-text-muted)" }}>Status</th>
               <th style={{ padding: "8px 12px", fontSize: 12, color: "var(--color-text-muted)" }}>Next Follow-up</th>
               <th style={{ padding: "8px 12px", fontSize: 12, color: "var(--color-text-muted)" }}>Attempts</th>
@@ -86,6 +88,11 @@ export function Candidates() {
                     <td style={{ padding: "10px 12px", fontSize: 14 }}>{c.name}</td>
                     <td style={{ padding: "10px 12px", fontSize: 13, color: "var(--color-text-muted)" }}>{c.email}</td>
                     <td style={{ padding: "10px 12px", fontSize: 13 }}>{p.stage.name}</td>
+                    <td style={{ padding: "10px 12px", fontSize: 13, color: "var(--color-text-muted)" }}>
+                      {p.assignedRecruiter
+                        ? p.assignedRecruiter.name ?? p.assignedRecruiter.email
+                        : "—"}
+                    </td>
                     <td style={{ padding: "10px 12px" }}>
                       <StatusBadge status={p.status} />
                     </td>
@@ -101,7 +108,7 @@ export function Candidates() {
                 <tr key={c.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <td style={{ padding: "10px 12px", fontSize: 14 }}>{c.name}</td>
                   <td style={{ padding: "10px 12px", fontSize: 13, color: "var(--color-text-muted)" }}>{c.email}</td>
-                  <td colSpan={4} style={{ padding: "10px 12px", fontSize: 13, color: "var(--color-text-muted)" }}>Not in pipeline</td>
+                  <td colSpan={5} style={{ padding: "10px 12px", fontSize: 13, color: "var(--color-text-muted)" }}>Not in pipeline</td>
                 </tr>
               ),
             )}

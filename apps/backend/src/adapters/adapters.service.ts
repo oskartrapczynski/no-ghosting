@@ -12,7 +12,6 @@ export class AdaptersService {
   private readonly logger = new Logger(AdaptersService.name);
 
   constructor(private prisma: PrismaService) {
-    // Register built-in adapters
     registerAdapter(demoAdapter);
   }
 
@@ -26,17 +25,46 @@ export class AdaptersService {
     return adapter.testConnection(config);
   }
 
-  async sync(adapterId: string, tenantId: string, config: Record<string, unknown>) {
+  async sync(
+    adapterId: string,
+    tenantId: string,
+    config: Record<string, unknown>,
+  ) {
     const adapter = getAdapter(adapterId);
     if (!adapter) throw new Error(`Adapter "${adapterId}" not found`);
 
     const result = await adapter.sync(config);
     this.logger.log(
-      `Synced ${result.pipelines.length} pipelines, ${result.candidates.length} candidates from ${adapter.name}`,
+      `Synced ${result.pipelines.length} pipelines, ${result.recruiters.length} recruiters, ${result.candidates.length} candidates from ${adapter.name}`,
     );
 
-    // Build a map of pipeline atsId -> DB pipeline (with stages)
-    const pipelineMap = new Map<string, { id: string; stageMap: Map<string, string> }>();
+    // Recruiters — upsert by (atsId, tenantId), fall back to email
+    const recruiterByAtsId = new Map<string, string>(); // ats id -> db id
+    for (const r of result.recruiters) {
+      const existing = await this.prisma.recruiter.findFirst({
+        where: { tenantId, OR: [{ atsId: r.atsId }, { email: r.email }] },
+      });
+      const dbRecruiter = existing
+        ? await this.prisma.recruiter.update({
+            where: { id: existing.id },
+            data: { email: r.email, name: r.name, atsId: r.atsId },
+          })
+        : await this.prisma.recruiter.create({
+            data: {
+              tenantId,
+              email: r.email,
+              name: r.name,
+              atsId: r.atsId,
+            },
+          });
+      recruiterByAtsId.set(r.atsId, dbRecruiter.id);
+    }
+
+    // Pipelines + stages
+    const pipelineMap = new Map<
+      string,
+      { id: string; stageMap: Map<string, string> }
+    >();
 
     for (const pipeline of result.pipelines) {
       let dbPipeline = await this.prisma.pipeline.findFirst({
@@ -64,7 +92,6 @@ export class AdaptersService {
         let dbStage = await this.prisma.stage.findFirst({
           where: { pipelineId: dbPipeline.id, name: stage.name },
         });
-
         if (dbStage) {
           dbStage = await this.prisma.stage.update({
             where: { id: dbStage.id },
@@ -85,13 +112,11 @@ export class AdaptersService {
       pipelineMap.set(pipeline.atsId, { id: dbPipeline.id, stageMap });
     }
 
-    // Upsert candidates and link them to pipelines
+    // Candidates + linking
     let linked = 0;
     for (const candidate of result.candidates) {
       const dbCandidate = await this.prisma.candidate.upsert({
-        where: {
-          email_tenantId: { email: candidate.email, tenantId },
-        },
+        where: { email_tenantId: { email: candidate.email, tenantId } },
         create: {
           tenantId,
           email: candidate.email,
@@ -99,19 +124,14 @@ export class AdaptersService {
           phone: candidate.phone,
           atsId: candidate.atsId,
         },
-        update: {
-          name: candidate.name,
-          phone: candidate.phone,
-        },
+        update: { name: candidate.name, phone: candidate.phone },
       });
 
-      // Create CandidatePipeline junction if candidate has pipeline + stage info
       if (candidate.pipelineAtsId && candidate.currentStage) {
         const pipelineInfo = pipelineMap.get(candidate.pipelineAtsId);
         if (pipelineInfo) {
           const stageId = pipelineInfo.stageMap.get(candidate.currentStage);
           if (stageId) {
-            // Look up first active follow-up rule for this stage to calculate nextFollowUpAt
             const rule = await this.prisma.followUpRule.findFirst({
               where: { stageId, active: true },
               orderBy: { delayDays: "asc" },
@@ -122,6 +142,10 @@ export class AdaptersService {
             nextFollowUpAt.setDate(
               nextFollowUpAt.getDate() + (rule?.delayDays ?? 3),
             );
+
+            const recruiterId = candidate.assignedRecruiterAtsId
+              ? (recruiterByAtsId.get(candidate.assignedRecruiterAtsId) ?? null)
+              : null;
 
             await this.prisma.candidatePipeline.upsert({
               where: {
@@ -134,12 +158,14 @@ export class AdaptersService {
                 candidateId: dbCandidate.id,
                 pipelineId: pipelineInfo.id,
                 currentStageId: stageId,
+                assignedRecruiterId: recruiterId,
                 lastContactAt,
                 nextFollowUpAt,
                 status: "ACTIVE",
               },
               update: {
                 currentStageId: stageId,
+                assignedRecruiterId: recruiterId,
               },
             });
             linked++;
@@ -152,6 +178,7 @@ export class AdaptersService {
 
     return {
       pipelines: result.pipelines.length,
+      recruiters: result.recruiters.length,
       candidates: result.candidates.length,
       linked,
       errors: result.errors,

@@ -3,7 +3,8 @@ import type { Channel } from "./base";
 
 /**
  * SMS channel placeholder.
- * TODO: Implement with Twilio, MessageBird, or similar provider.
+ * TODO: Implement with Twilio, MessageBird, or similar provider to nudge
+ * recruiters via SMS if email isn't enough.
  */
 export const smsChannel: Channel = {
   type: "sms",
@@ -14,17 +15,9 @@ export const smsChannel: Channel = {
   },
 
   async send(
-    message: FollowUpMessage,
+    _message: FollowUpMessage,
     _config: Record<string, unknown>,
   ): Promise<ChannelSendResult> {
-    if (!message.to.phone) {
-      return { success: false, error: "No phone number for candidate" };
-    }
-
-    // TODO: Implement actual SMS sending
-    console.log(
-      `[SMS] Would send to ${message.to.phone}: ${message.body.slice(0, 160)}`,
-    );
     return { success: false, error: "SMS channel not yet implemented" };
   },
 };

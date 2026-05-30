@@ -42,7 +42,7 @@ export const emailChannel: Channel = {
     const smtp = config as unknown as SmtpConfig;
 
     if (!message.to.email) {
-      return { success: false, error: "No email address for candidate" };
+      return { success: false, error: "No email address for recruiter" };
     }
 
     try {
@@ -56,7 +56,9 @@ export const emailChannel: Channel = {
       const result = await transporter.sendMail({
         from: `"${smtp.fromName}" <${smtp.fromEmail}>`,
         to: message.to.email,
-        subject: message.subject ?? `Update on your application`,
+        subject:
+          message.subject ??
+          `Candidate ${message.candidateName} needs a reply (${message.daysSilent}d silent)`,
         text: message.body,
       });
 
