@@ -23,9 +23,9 @@ No Ghosting is in an early stage, and I want to shape it around real recruiting 
 
 **In return:** honest feedback, and (optionally) permission to publish an anonymized case study.
 
-👉 **Interested?** Get in touch: see [Contact](#-built-by) below or take the free audit on [noghosting.pl](https://noghosting.pl).
+👉 **Interested?** Get in touch: see [Contact](#-built-by) below or take the free audit on [noghosting.org](https://noghosting.org/en/).
 
-> 🇵🇱 **W skrócie:** aplikacja jest we wczesnej fazie rozwoju. **Pierwsze 3 firmy otrzymają bezpłatne wdrożenie bezpośrednio od twórcy**: analizę procesu, konfigurację, integrację z ATS i bezpośredni kontakt w trakcie pilotażu. W zamian prosimy o feedback.
+> 🇵🇱 **W skrócie:** aplikacja jest we wczesnej fazie rozwoju. **Pierwsze 3 firmy otrzymają bezpłatne wdrożenie bezpośrednio od twórcy**: analizę procesu, konfigurację, integrację z ATS i bezpośredni kontakt w trakcie pilotażu. W zamian proszę o feedback. Bezpłatny audyt procesu: [noghosting.org](https://noghosting.org).
 
 ---
 
