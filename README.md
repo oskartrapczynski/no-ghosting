@@ -1,8 +1,11 @@
 # No Ghosting
 
+[![CI](https://github.com/oskartrapczynski/no-ghosting/actions/workflows/ci.yml/badge.svg)](https://github.com/oskartrapczynski/no-ghosting/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 > **Status: Early Access (v0.1).** The core engine works end-to-end; ATS integrations and additional channels are under active development. Looking for **3 pilot companies**. [See the offer ↓](#-pilot-program--3-spots)
 
-Open-source platform that keeps recruiters from going silent on candidates. When a candidate has waited too long at any pipeline stage, No Ghosting **automatically nudges the responsible recruiter** and escalates if nothing happens.
+Open-source platform that keeps recruiters from going silent on candidates. When a candidate has waited too long at any pipeline stage, No Ghosting **automatically nudges the responsible recruiter** and flags the candidate if the nudges keep being ignored.
 
 ---
 
@@ -36,9 +39,13 @@ Candidates apply, interview, and then hear nothing. Usually it isn't bad intent:
 2. **Monitor** time since last contact per candidate, per stage
 3. **Nudge the assigned recruiter** (email today; SMS and ATS messaging planned) when a stage's deadline passes
 4. **Reset the clock** automatically when the recruiter replies (ATS webhook)
-5. **Escalate & flag**: after N ignored nudges the candidate is marked as `GHOSTED` and a manager can be notified
+5. **Flag**: after N ignored nudges the candidate is marked as `GHOSTED` (manager escalation is on the roadmap)
 
 The tool doesn't replace the human touch. It makes sure the recruiter remembers to reply.
+
+## Preview
+
+📸 **Screenshots and a short demo GIF are coming soon.** Until then, you can run the dashboard locally with demo data in a few minutes: see [Quick start](#quick-start).
 
 ## Roadmap
 
@@ -53,6 +60,7 @@ The tool doesn't replace the human touch. It makes sure the recruiter remembers 
 | Demo ATS adapter + seed data | ✅ Done |
 | Authentication & user roles | 🚧 In progress |
 | ATS adapters: Taleo, iCIMS, Workday, SuccessFactors | 🔜 Planned (driven by pilot needs) |
+| Manager escalation after max attempts (recipient configurable per company structure) | 🔜 Planned (shaped with pilot partners) |
 | SMS / Slack / ATS-message channels | 🔜 Planned |
 | Analytics: response times, SLA compliance, ghosting rate | 🔜 Planned |
 
@@ -100,6 +108,9 @@ API: http://localhost:3001/api/health
 
 Full deployment: `docker compose up -d`
 
+> [!WARNING]
+> **Not production-ready yet.** Authentication is currently a placeholder: tenants are resolved from the `x-tenant-id` header and the dashboard uses a hardcoded demo tenant. Run it locally or in a private network only, and don't expose it to the internet until real auth lands (see [Roadmap](#roadmap)). Pilot deployments get proper auth set up as part of the implementation.
+
 ## Key concepts
 
 ### ATS adapters
@@ -126,8 +137,8 @@ Configured per pipeline stage:
 - **delayDays**: days of silence before the recruiter gets nudged
 - **channelType**: `EMAIL`, `SMS` or `ATS_MESSAGE`
 - **templateSubject / templateBody**: support `{{recruiterName}}`, `{{candidateName}}`, `{{stageName}}`, `{{daysSilent}}`, `{{attemptNumber}}` and more
-- **maxAttempts**: after N ignored nudges the candidate is flagged as `GHOSTED`
-- **escalate**: notify a manager when max attempts are reached
+- **maxAttempts**: after N delivered nudges without a recruiter reply, the candidate is flagged as `GHOSTED`. A reply (via the webhook below) resets the counter.
+- **escalate** *(coming soon)*: notify a manager when max attempts are reached
 
 ### Webhook
 
@@ -152,12 +163,12 @@ I build software that removes friction from business processes: automations, int
 
 **I'm open to full-time roles and freelance projects**, especially in process automation, system integrations and full-stack product development.
 
-- 💼 LinkedIn: `TODO: add link`
-- ✉️ Email: `TODO: add address`
+- 💼 LinkedIn: [oskar-trapczynski](https://www.linkedin.com/in/oskar-trapczynski/)
+- ✉️ Email: [oskar.trapczynski@gmail.com](mailto:oskar.trapczynski@gmail.com)
 - 🐙 GitHub: [@oskartrapczynski](https://github.com/oskartrapczynski)
 
 If your team is dealing with a process that could run smoother, let's talk, whether it's about No Ghosting or something else entirely.
 
 ## License
 
-MIT
+[MIT](LICENSE)
