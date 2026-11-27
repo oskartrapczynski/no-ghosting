@@ -53,10 +53,16 @@ export class FollowUpsService {
       const rules = cp.stage.followUpRules
       if (rules.length === 0) continue
 
-      // Count previous *failed* attempts on this CP — successes shouldn't
-      // burn through the attempt budget.
+      // Count nudges the recruiter has *ignored*: delivered since the last
+      // recruiter→candidate contact. A recruiter reply (webhook) moves
+      // lastContactAt forward, which resets this counter. Failed sends don't
+      // count — the recruiter never saw them.
       const previousAttempts = await this.prisma.followUpLog.count({
-        where: { candidatePipelineId: cp.id, failedAt: { not: null } },
+        where: {
+          candidatePipelineId: cp.id,
+          deliveredAt: { not: null },
+          ...(cp.lastContactAt && { sentAt: { gte: cp.lastContactAt } }),
+        },
       })
 
       // Pick the rule for this attempt index (escalating). Cap at last rule.
