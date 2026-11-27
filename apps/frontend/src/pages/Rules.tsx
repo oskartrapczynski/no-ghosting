@@ -136,7 +136,6 @@ export function Rules() {
                           <span>After <strong>{rule.delayDays} days</strong> of silence</span>
                           <span style={{ color: "var(--color-text-muted)" }}>via {rule.channelType}</span>
                           <span style={{ color: "var(--color-text-muted)" }}>max {rule.maxAttempts} attempts</span>
-                          {rule.escalate && <span style={{ color: "var(--color-warning)" }}>escalates</span>}
                           <span
                             style={{
                               marginLeft: "auto",
@@ -309,9 +308,13 @@ function RuleForm({
             style={{ ...fieldStyle, width: 80 }}
           />
         </label>
-        <label style={{ fontSize: 12, color: "var(--color-text-muted)", display: "flex", alignItems: "center", gap: 6, alignSelf: "end" }}>
-          <input type="checkbox" checked={escalate} onChange={(e) => setEscalate(e.target.checked)} />
-          Escalate
+        {/* Manager escalation isn't implemented in the backend yet — see README roadmap. */}
+        <label
+          title="Notify a manager after max attempts. Coming soon."
+          style={{ fontSize: 12, color: "var(--color-text-muted)", display: "flex", alignItems: "center", gap: 6, alignSelf: "end", opacity: 0.6, cursor: "not-allowed" }}
+        >
+          <input type="checkbox" checked={escalate} onChange={(e) => setEscalate(e.target.checked)} disabled />
+          Escalate (coming soon)
         </label>
         {isEdit && (
           <label style={{ fontSize: 12, color: "var(--color-text-muted)", display: "flex", alignItems: "center", gap: 6, alignSelf: "end" }}>
