@@ -19,7 +19,7 @@ Turborepo monorepo with npm workspaces:
 
 - **npm workspaces** — zero extra tooling, any Node 20+ user can `npm install` and go
 - **Multi-tenant from day one** — each company is a Tenant, all queries scoped by tenantId
-- **ATS adapters are plugins** ��� register via `registerAdapter()`, implement `AtsAdapter` interface
+- **ATS adapters are plugins** — register via `registerAdapter()`, implement `AtsAdapter` interface
 - **BullMQ for scheduling** — follow-up jobs are scheduled with delays, processed by workers
 - **Cron every 15min** — scans for overdue follow-ups and enqueues them
 - **Self-hosted + SaaS-ready** — Docker Compose for self-hosted, multi-tenant for SaaS
