@@ -4,6 +4,7 @@ import { Job } from "bullmq";
 import { PrismaService } from "../prisma/prisma.service";
 import { emailChannel, smsChannel } from "@no-ghosting/channels";
 import type { FollowUpMessage } from "@no-ghosting/shared";
+import { daysSince, renderTemplate } from "./follow-ups.utils";
 
 interface FollowUpJobData {
   candidatePipelineId: string;
@@ -71,14 +72,7 @@ export class FollowUpsProcessor extends WorkerHost {
       return;
     }
 
-    const daysSilent = cp.lastContactAt
-      ? Math.max(
-          0,
-          Math.floor(
-            (Date.now() - cp.lastContactAt.getTime()) / (1000 * 60 * 60 * 24),
-          ),
-        )
-      : 0;
+    const daysSilent = daysSince(cp.lastContactAt);
 
     const renderVars = {
       recruiterName: cp.assignedRecruiter.name ?? cp.assignedRecruiter.email,
@@ -90,10 +84,7 @@ export class FollowUpsProcessor extends WorkerHost {
       attemptNumber: String(attemptNumber),
     };
 
-    const render = (tpl: string) =>
-      tpl.replace(/\{\{(\w+)\}\}/g, (_, key: string) =>
-        key in renderVars ? renderVars[key as keyof typeof renderVars] : "",
-      );
+    const render = (tpl: string) => renderTemplate(tpl, renderVars);
 
     const body = render(rule.templateBody);
     const subject = rule.templateSubject ? render(rule.templateSubject) : undefined;
