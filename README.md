@@ -169,6 +169,10 @@ I build software that removes friction from business processes: automations, int
 
 If your team is dealing with a process that could run smoother, let's talk, whether it's about No Ghosting or something else entirely.
 
+## Contributing
+
+Issues, feedback and pull requests are welcome, especially new ATS adapters. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
 [MIT](LICENSE)
